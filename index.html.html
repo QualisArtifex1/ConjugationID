@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Verb Navigator — Aesthetic Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --parchment:#f8f4ea;
+      --ink:#2e2a27;
+      --primary:#7c0a02; /* deep red */
+      --secondary:#4b3a2f; /* dark leather */
+      --correct:#2f8f5b;
+      --incorrect:#b22222;
+      --gold:#c9a227;
+      --shadow:rgba(0,0,0,0.25);
+      --electric:#7df9ff; /* border glow */
+      --electric-soft: rgba(125,249,255,0.35);
+    }
+
+    html,body{height:100%;}
+    body{
+      margin:0; overflow-x:hidden; color:var(--ink);
+      font-family:'EB Garamond','Garamond','Georgia',serif;
+      background: radial-gradient(1200px 800px at 70% -10%, #2b2252 0%, #0e0b1d 65%, #07060f 100%);
+    }
+
+    /* Galaxy canvas sits behind everything */
+    #galaxy{ position:fixed; inset:0; z-index:-2; display:block; }
+
+    /* A subtle vignette for drama */
+    .vignette{ pointer-events:none; position:fixed; inset:0; z-index:-1; background: radial-gradient(60% 60% at 50% 45%, transparent 55%, rgba(0,0,0,0.5) 100%); }
+
+    /* Floating dust motes for library vibe */
+    .mote{ position:fixed; width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,0.5); filter:blur(0.5px); animation: float 14s linear infinite; }
+    @keyframes float{from{transform:translateY(0)} to{transform:translateY(-120vh)}}
+
+    /* Container */
+    .shell{ min-height:100svh; display:grid; place-items:center; padding: clamp(16px, 3vw, 36px); }
+
+    .game{
+      width:min(980px, 100%);
+      position:relative;
+      border-radius:20px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      backdrop-filter: blur(12px);
+      border:1px solid rgba(255,255,255,0.25);
+      box-shadow: 0 30px 80px var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.08);
+      padding: clamp(20px, 4vw, 36px);
+      color:#f7f2e9;
+      overflow:hidden; isolation:isolate;
+    }
+
+    /* Electric border (SVG-driven, robust) */
+    .electric{ position:relative; }
+    #eb-svg{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; border-radius:inherit; overflow:visible }
+    .eb-layer-glow{ position:absolute; inset:0; border-radius:inherit; pointer-events:none; box-shadow: 0 0 22px rgba(125,249,255,0.35), 0 0 44px rgba(125,249,255,0.25), 0 0 70px rgba(125,249,255,0.15); }
+
+    .frame{position:absolute; inset:0; pointer-events:none; border-radius:20px;}
+    .frame::before, .frame::after{
+      content:""; position:absolute; inset:1px; border-radius:18px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent 40%),
+                  linear-gradient(315deg, rgba(255,255,255,0.1), transparent 60%);
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude; padding:2px;
+    }
+
+    header{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom: clamp(16px, 2.5vw, 24px); }
+    .title{display:flex; align-items:center; gap:14px}
+    .title h1{font-family:'Cinzel','Trajan Pro','Times New Roman',serif; font-weight:700; letter-spacing:0.5px; margin:0; font-size: clamp(28px, 4.4vw, 40px)}
+    .laurel{width:42px; height:42px; color:var(--gold); filter:drop-shadow(0 0 6px rgba(255,215,0,0.25))}
+
+    .stats{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-weight:600; letter-spacing:0.2px; }
+    .pill{ background: linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06)); border:1px solid rgba(255,255,255,0.25); padding:8px 14px; border-radius:999px; font-size:1rem; }
+
+    .question{ background: rgba(14,12,25,0.55); border:1px solid rgba(255,255,255,0.25); border-left:4px solid var(--gold); border-radius:14px; padding:18px 18px; margin: 6px 0 22px 0; box-shadow: inset 0 0 30px rgba(255,255,255,0.04), 0 8px 20px rgba(0,0,0,0.3); }
+    .prompt{font-size: clamp(18px, 2.4vw, 22px); color:#e8e3da; margin:6px 0 12px 0; opacity:0.9}
+    .entry{font-weight:700; font-size: clamp(20px, 3.6vw, 28px); color:#fff; letter-spacing:0.3px}
+
+    .grid{display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:14px; margin-top:10px}
+
+    .btn{
+      --glow: 0 0 0 rgba(255,255,255,0);
+      display:inline-block; width:100%; border-radius:12px; padding:14px 16px; cursor:pointer; font-weight:700;
+      color:#f5efe6; border:1px solid rgba(255,255,255,0.25);
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+      box-shadow: 0 8px 22px rgba(0,0,0,0.25), var(--glow);
+      transition: transform .18s ease, box-shadow .25s ease, background .25s ease, opacity .25s ease;
+      text-align:center; user-select:none;
+    }
+    .btn:hover{transform: translateY(-3px)}
+    .btn:disabled{opacity:0.55; cursor:not-allowed; transform:none}
+
+    .btn.correct{ background: linear-gradient(180deg, rgba(46,143,91,0.65), rgba(46,143,91,0.35)); border-color: rgba(46,143,91,0.9); --glow: 0 0 22px rgba(46,143,91,0.7); animation: pop .5s ease; }
+    .btn.incorrect{ background: linear-gradient(180deg, rgba(178,34,34,0.65), rgba(178,34,34,0.35)); border-color: rgba(178,34,34,0.9); animation: shake .4s ease; }
+
+    @keyframes pop{0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)}}
+    @keyframes shake{0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}}
+
+    .feedback{min-height:30px; font-weight:700; font-size: clamp(16px, 2.2vw, 20px); margin-top:10px}
+    .feedback .ok{color:#aef0c9}
+    .feedback .no{color:#ffb8b8}
+
+    .actions{display:flex; gap:12px; align-items:center; margin-top:14px; flex-wrap:wrap}
+    .cta{ border-radius:12px; padding:12px 16px; font-weight:800; letter-spacing:0.3px; cursor:pointer; border:1px solid rgba(255,255,255,0.25); color:#16131f; background:linear-gradient(180deg,#ffd75a,#d5a422); box-shadow: 0 10px 24px rgba(0,0,0,0.35); }
+    .cta:hover{filter:saturate(1.1); transform: translateY(-2px)}
+    .cta.secondary{background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06)); color:#efe9df}
+
+    .progress{ width:100%; height:10px; border-radius:999px; background: rgba(255,255,255,0.12); margin: 12px 0 4px 0; overflow:hidden; }
+    .bar{height:100%; width:0%; background: linear-gradient(90deg, #ffd75a, #ffefb3); border-radius:inherit; transition:width .35s ease}
+
+    .footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-weight:600; opacity:0.9; gap:10px}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.3); padding:2px 6px; border-radius:6px}
+
+    /* Confetti canvas on top */
+    #confetti{position:fixed; inset:0; z-index:10; pointer-events:none}
+
+    @media (prefers-reduced-motion: reduce){ .btn:hover, .cta:hover{transform:none} .btn.correct, .btn.incorrect{animation:none} }
+  </style>
+</head>
+<body>
+  <canvas id="galaxy"></canvas>
+  <div class="vignette"></div>
+  
+  <!-- Floating dust motes -->
+  <div id="motes"></div>
+
+  <div class="shell">
+    <div class="game electric" role="application" aria-label="Verb Navigator game">
+      <div class="frame"></div>
+      <header>
+        <div class="title">
+          <svg class="laurel" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true"><path d="M10 52c8-2 15-11 16-20-9 1-16 11-16 20zm12 6c9-5 12-16 11-24-10 4-13 16-11 24zm22-6c-8-2-15-11-16-20 9 1 16 11 16 20zm-12 6c-9-5-12-16-11-24 10 4 13 16 11 24z"/></svg>
+          <h1>The Verb Navigator</h1>
+        </div>
+        <div class="stats">
+          <div class="pill" id="scorePill">Score: <span id="score">0</span></div>
+          <div class="pill" id="streakPill">Streak: <span id="streak">0</span></div>
+          <div class="pill">Questions: <span id="qIndex">1</span>/<span id="qTotal">–</span></div>
+        </div>
+      </header>
+
+      <div class="question">
+        <div class="prompt">Identify the conjugation of the Latin verb from its dictionary entry:</div>
+        <div class="entry" id="entry">…</div>
+      </div>
+
+      <div class="grid" id="choices" role="group" aria-label="Answer choices"></div>
+
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+
+      <div class="actions">
+        <button id="next" class="cta" style="display:none">Continue ⟶</button>
+        <button id="restart" class="cta secondary">Restart</button>
+      </div>
+
+      <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
+
+      <div class="footer">
+        <div>Hotkeys: <span class="kbd">1–5</span> to answer • <span class="kbd">N</span> next</div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="confetti"></canvas>
+
+  <script>
+    /***********************
+     * DATA & GAME LOGIC  *
+     ***********************/
+    const BANK = [
+      { stem: "amo, amare, amavi, amatum", correct: "1st Conjugation" },
+      { stem: "laudo, laudare, laudavi, laudatum", correct: "1st Conjugation" },
+      { stem: "voco, vocare, vocavi, vocatum", correct: "1st Conjugation" },
+      { stem: "paro, parare, paravi, paratum", correct: "1st Conjugation" },
+      { stem: "habito, habitare, habitavi, habitatum", correct: "1st Conjugation" },
+      { stem: "supero, superare, superavi, superatum", correct: "1st Conjugation" },
+      { stem: "narro, narrare, narravi, narratum", correct: "1st Conjugation" },
+      { stem: "iuvo, iuvare, iuvi, iutum", correct: "1st Conjugation" },
+      { stem: "sto, stare, steti, statum", correct: "1st Conjugation" },
+      { stem: "do, dare, dedi, datum", correct: "1st Conjugation" },
+      { stem: "porto, portare, portavi, portatum", correct: "1st Conjugation" },
+      { stem: "oppugno, oppugnare, oppugnavi, oppugnatum", correct: "1st Conjugation" },
+      { stem: "pugno, pugnare, pugnavi, pugnatum", correct: "1st Conjugation" },
+      { stem: "oro, orare, oravi, oratum", correct: "1st Conjugation" },
+
+      { stem: "moneo, monere, monui, monitum", correct: "2nd Conjugation" },
+      { stem: "video, videre, vidi, visum", correct: "2nd Conjugation" },
+      { stem: "moveo, movere, movi, motum", correct: "2nd Conjugation" },
+      { stem: "doceo, docere, docui, doctum", correct: "2nd Conjugation" },
+      { stem: "iubeo, iubere, iussi, iussum", correct: "2nd Conjugation" },
+      { stem: "deleo, delere, delevi, deletum", correct: "2nd Conjugation" },
+      { stem: "terreo, terrere, terrui, territum", correct: "2nd Conjugation" },
+      { stem: "habeo, habere, habui, habitum", correct: "2nd Conjugation" },
+      { stem: "teneo, tenere, tenui, tentum", correct: "2nd Conjugation" },
+      { stem: "timeo, timere, timui, (no supine)", correct: "2nd Conjugation" },
+
+      { stem: "lego, legere, legi, lectum", correct: "3rd Conjugation" },
+      { stem: "ago, agere, egi, actum", correct: "3rd Conjugation" },
+      { stem: "mitto, mittere, misi, missum", correct: "3rd Conjugation" },
+      { stem: "duco, ducere, duxi, ductum", correct: "3rd Conjugation" },
+      { stem: "rego, regere, rexi, rectum", correct: "3rd Conjugation" },
+      { stem: "scribo, scribere, scripsi, scriptum", correct: "3rd Conjugation" },
+      { stem: "credo, credere, credidi, creditum", correct: "3rd Conjugation" },
+      { stem: "peto, petere, petivi, petitum", correct: "3rd Conjugation" },
+      { stem: "traho, trahere, traxi, tractum", correct: "3rd Conjugation" },
+      { stem: "cado, cadere, cecidi, casum", correct: "3rd Conjugation" },
+      { stem: "occido, occidere, occidi, occisum", correct: "3rd Conjugation" },
+      { stem: "gero, gerere, gessi, gestum", correct: "3rd Conjugation" },
+      { stem: "vinco, vincere, vici, victum", correct: "3rd Conjugation" },
+      { stem: "curro, currere, cucurri, cursum", correct: "3rd Conjugation" },
+      { stem: "amitto, amittere, amisi, amissum", correct: "3rd Conjugation" },
+      { stem: "ludo, ludere, lusi, lusum", correct: "3rd Conjugation" },
+      { stem: "pono, ponere, posui, positum", correct: "3rd Conjugation" },
+      { stem: "quaero, quaerere, quaesivi, quaesitum", correct: "3rd Conjugation" },
+      { stem: "tango, tangere, tetigi, tactum", correct: "3rd Conjugation" },
+
+      { stem: "capio, capere, cepi, captum", correct: "3rd Conjugation -io" },
+      { stem: "rapio, rapere, rapui, raptum", correct: "3rd Conjugation -io" },
+      { stem: "fugio, fugere, fugi, fugitum", correct: "3rd Conjugation -io" },
+      { stem: "iacio, iacere, ieci, iactum", correct: "3rd Conjugation -io" },
+      { stem: "accipio, accipere, accepi, acceptum", correct: "3rd Conjugation -io" },
+      { stem: "pario, parere, peperi, partum", correct: "3rd Conjugation -io" },
+
+      { stem: "audio, audire, audivi, auditum", correct: "4th Conjugation" },
+      { stem: "sentio, sentire, sensi, sensum", correct: "4th Conjugation" },
+      { stem: "venio, venire, veni, ventum", correct: "4th Conjugation" },
+      { stem: "invenio, invenire, inveni, inventum", correct: "4th Conjugation" },
+      { stem: "servio, servire, servivi, servitum", correct: "4th Conjugation" },
+      { stem: "aperio, aperire, aperui, apertum", correct: "4th Conjugation" },
+      { stem: "munio, munire, munivi, munitum", correct: "4th Conjugation" },
+      { stem: "reperio, reperire, repperi, repertum", correct: "4th Conjugation" },
+      { stem: "dormio, dormire, dormivi, dormitum", correct: "4th Conjugation" },
+      { stem: "custodio, custodire, custodivi, custoditum", correct: "4th Conjugation" }
+    ];
+
+    const OPTIONS = ["1st Conjugation","2nd Conjugation","3rd Conjugation","3rd Conjugation -io","4th Conjugation"];
+
+    const entry = document.getElementById('entry');
+    const choices = document.getElementById('choices');
+    const feedback = document.getElementById('feedback');
+    const nextBtn = document.getElementById('next');
+    const restartBtn = document.getElementById('restart');
+    const scoreEl = document.getElementById('score');
+    const streakEl = document.getElementById('streak');
+    const qIndexEl = document.getElementById('qIndex');
+    const qTotalEl = document.getElementById('qTotal');
+    const bar = document.getElementById('bar');
+
+    let order = [];
+    let i = 0, score = 0, streak = 0;
+
+    function shuffle(a){ for(let j=a.length-1;j>0;j--){ const k = Math.floor(Math.random()*(j+1)); [a[j],a[k]]=[a[k],a[j]] } return a }
+
+    function start(){
+      order = shuffle([...Array(BANK.length).keys()]);
+      i = 0; score = 0; streak = 0;
+      scoreEl.textContent = score; streakEl.textContent = streak;
+      qTotalEl.textContent = BANK.length;
+      nextBtn.style.display='none';
+      render();
+    }
+
+    function render(){
+      if(i>=order.length){ return end() }
+      const q = BANK[order[i]];
+      qIndexEl.textContent = i+1;
+      entry.textContent = q.stem;
+      feedback.textContent = '';
+      nextBtn.style.display = 'none';
+      bar.style.width = ((i)/(order.length))*100 + '%';
+      choices.innerHTML = '';
+      OPTIONS.forEach((label, idx)=>{
+        const b = document.createElement('button');
+        b.className = 'btn';
+        b.type = 'button';
+        b.textContent = label;
+        b.setAttribute('aria-label', label);
+        b.addEventListener('click', ()=> choose(label, q, b));
+        b.dataset.key = (idx+1);
+        choices.appendChild(b);
+      })
+    }
+
+    function choose(sel, q, el){
+      const correct = sel === q.correct;
+      const buttons = [...document.querySelectorAll('.btn')];
+      buttons.forEach(b=>b.disabled = true);
+
+      if(correct){
+        el.classList.add('correct');
+        score++; streak++; scoreEl.textContent=score; streakEl.textContent=streak;
+        feedback.innerHTML = `<span class="ok">Recte!</span> Well done.`;
+        celebrate();
+        nextBtn.style.display='inline-block';
+      }else{
+        el.classList.add('incorrect');
+        streak = 0; streakEl.textContent=streak;
+        feedback.innerHTML = `<span class=\"no\">Non recte.</span> Try again.`;
+        // Re-enable only the wrong ones after a short shake
+        setTimeout(()=>{
+          buttons.forEach(b=>{ if(b.textContent !== q.correct){ b.disabled=false; } })
+        }, 420);
+      }
+    }
+
+    function next(){ i++; render(); }
+
+    function end(){
+      entry.textContent = 'Game Over!';
+      bar.style.width = '100%';
+      choices.innerHTML = '';
+      feedback.innerHTML = `You scored <strong>${score}</strong> / ${order.length}.`;
+      nextBtn.style.display='none';
+      const again = document.createElement('button');
+      again.className='cta';
+      again.textContent='Play Again';
+      again.addEventListener('click', start);
+      choices.appendChild(again);
+    }
+
+    restartBtn.addEventListener('click', start);
+    nextBtn.addEventListener('click', next);
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e)=>{
+      if(e.key>='1' && e.key<='5'){
+        const idx = Number(e.key)-1; const btn = document.querySelector(`.btn[data-key=\"${idx+1}\"]`);
+        if(btn && !btn.disabled){ btn.click(); }
+      } else if(e.key==='n' || e.key==='N'){ if(nextBtn.style.display!=='none'){ nextBtn.click(); } }
+    })
+
+    start();
+
+    /********************************
+     * ELECTRIC BORDER (SVG VERSION) *
+     ********************************/
+    (function(){
+      const EB = { color:'#7df9ff', speed:1, chaos:0.5, thickness:2 };
+      const host = document.querySelector('.game.electric');
+      if(!host) return;
+
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.id = 'eb-svg'; svg.setAttribute('aria-hidden','true');
+      host.appendChild(svg);
+
+      const defs = document.createElementNS(svgNS,'defs');
+      const filter = document.createElementNS(svgNS,'filter');
+      filter.setAttribute('id','eb-filter');
+      filter.setAttribute('colorInterpolationFilters','sRGB');
+      filter.setAttribute('x','-200%'); filter.setAttribute('y','-200%');
+      filter.setAttribute('width','500%'); filter.setAttribute('height','500%');
+
+      function make(tag, attrs){ const el=document.createElementNS(svgNS, tag); for(const k in attrs){ el.setAttribute(k, attrs[k]); } return el; }
+
+      const tur1 = make('feTurbulence',{type:'turbulence', baseFrequency:'0.02', numOctaves:'10', result:'noise1', seed:'1'});
+      const off1 = make('feOffset',{in:'noise1', dx:'0', dy:'0', result:'offsetNoise1'});
+      const aDy1 = make('animate',{attributeName:'dy', values:'700; 0', dur:'6s', repeatCount:'indefinite', calcMode:'linear'});
+      off1.appendChild(aDy1);
+
+      const tur2 = make('feTurbulence',{type:'turbulence', baseFrequency:'0.02', numOctaves:'10', result:'noise2', seed:'1'});
+      const off2 = make('feOffset',{in:'noise2', dx:'0', dy:'0', result:'offsetNoise2'});
+      const aDy2 = make('animate',{attributeName:'dy', values:'0; -700', dur:'6s', repeatCount:'indefinite', calcMode:'linear'});
+      off2.appendChild(aDy2);
+
+      const tur3 = make('feTurbulence',{type:'turbulence', baseFrequency:'0.02', numOctaves:'10', result:'noise3', seed:'2'});
+      const off3 = make('feOffset',{in:'noise3', dx:'0', dy:'0', result:'offsetNoise3'});
+      const aDx1 = make('animate',{attributeName:'dx', values:'490; 0', dur:'6s', repeatCount:'indefinite', calcMode:'linear'});
+      off3.appendChild(aDx1);
+
+      const tur4 = make('feTurbulence',{type:'turbulence', baseFrequency:'0.02', numOctaves:'10', result:'noise4', seed:'2'});
+      const off4 = make('feOffset',{in:'noise4', dx:'0', dy:'0', result:'offsetNoise4'});
+      const aDx2 = make('animate',{attributeName:'dx', values:'0; -490', dur:'6s', repeatCount:'indefinite', calcMode:'linear'});
+      off4.appendChild(aDx2);
+
+      const comp1 = make('feComposite',{in:'offsetNoise1', in2:'offsetNoise2', result:'part1'});
+      const comp2 = make('feComposite',{in:'offsetNoise3', in2:'offsetNoise4', result:'part2'});
+      const blend = make('feBlend',{in:'part1', in2:'part2', mode:'color-dodge', result:'combinedNoise'});
+      const disp = make('feDisplacementMap',{in:'SourceGraphic', in2:'combinedNoise', scale:String(30*(EB.chaos||1)), xChannelSelector:'R', yChannelSelector:'B'});
+
+      filter.append(tur1,off1,tur2,off2,tur3,off3,tur4,off4,comp1,comp2,blend,disp);
+      defs.appendChild(filter); svg.appendChild(defs);
+
+      const stroke = make('rect',{x:'0', y:'0', rx:'20', ry:'20', fill:'none', stroke:EB.color, 'stroke-width':String(EB.thickness)});
+      stroke.style.filter = 'url(#eb-filter)';
+      svg.appendChild(stroke);
+
+      const glowLayer = document.createElement('div'); glowLayer.className='eb-layer-glow'; host.appendChild(glowLayer);
+
+      function update(){
+        const w = Math.max(1, Math.round(host.clientWidth));
+        const h = Math.max(1, Math.round(host.clientHeight));
+        svg.setAttribute('width', String(w)); svg.setAttribute('height', String(h));
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+
+        const radius = parseFloat(getComputedStyle(host).borderRadius) || 20;
+        stroke.setAttribute('x','1'); stroke.setAttribute('y','1');
+        stroke.setAttribute('width', String(w-2)); stroke.setAttribute('height', String(h-2));
+        stroke.setAttribute('rx', String(radius)); stroke.setAttribute('ry', String(radius));
+
+        // Update animation values to match size
+        aDy1.setAttribute('values', `${h}; 0`);
+        aDy2.setAttribute('values', `0; -${h}`);
+        aDx1.setAttribute('values', `${w}; 0`);
+        aDx2.setAttribute('values', `0; -${w}`);
+
+        const baseDur = 6; const dur = Math.max(0.001, baseDur / (EB.speed||1));
+        [aDy1,aDy2,aDx1,aDx2].forEach(a=> a.setAttribute('dur', `${dur}s`));
+        disp.setAttribute('scale', String(30*(EB.chaos||1)));
+
+        requestAnimationFrame(()=>{
+          [aDy1,aDy2,aDx1,aDx2].forEach(a=>{ if(typeof a.beginElement==='function'){ try{ a.beginElement(); }catch{} } });
+        });
+      }
+
+      const ro = new ResizeObserver(update); ro.observe(host); update();
+    })();
+
+    /***********************
+     * SELF-TESTS (light) *
+     ***********************/
+    (function runTests(){
+      const errors = [];
+      const ascii = /^[\x00-\x7F]*$/;
+      const labels = new Set(OPTIONS);
+      const seen = new Set();
+
+      // Test 1: All stems ASCII (no macrons)
+      BANK.forEach(v=>{ if(!ascii.test(v.stem)) errors.push(`Non-ASCII in stem: ${v.stem}`); });
+
+      // Test 2: All labels valid
+      BANK.forEach(v=>{ if(!labels.has(v.correct)) errors.push(`Invalid label for: ${v.stem} → ${v.correct}`); });
+
+      // Test 3: No duplicate stems
+      BANK.forEach(v=>{ if(seen.has(v.stem)) errors.push(`Duplicate stem: ${v.stem}`); seen.add(v.stem); });
+
+      // Test 4: Heuristic check for -io pattern
+      BANK.filter(v=>v.correct==='3rd Conjugation -io').forEach(v=>{
+        const parts = v.stem.split(',').map(s=>s.trim());
+        if(!(parts[0] && parts[0].endsWith('io') && parts[1] && parts[1].endsWith('ere'))){
+          errors.push(`-io heuristic mismatch: ${v.stem}`);
+        }
+      });
+
+      if(errors.length){
+        console.error('[Verb Navigator] TESTS FAILED:', errors);
+      }else{
+        console.log('[Verb Navigator] Tests passed:', {count:BANK.length});
+      }
+    })();
+
+    /***********************
+     * CELEBRATION CONFETTI *
+     ***********************/
+    const confetti = document.getElementById('confetti');
+    const cx = confetti.getContext('2d');
+    let confettiParts = [];
+    function celebrate(){
+      const {innerWidth:w, innerHeight:h} = window; confetti.width=w; confetti.height=h;
+      for(let k=0;k<50;k++){
+        confettiParts.push({ x: Math.random()*w, y: h+Math.random()*40, r: Math.random()*4+2, vx:(Math.random()-0.5)*2, vy: - (Math.random()*4+3), a: Math.random()*Math.PI, s: Math.random()*0.02+0.01, c: `hsl(${Math.floor(40+Math.random()*40)},100%,${60+Math.random()*20}%)` })
+      }
+    }
+    function stepConfetti(){
+      const {width:w, height:h} = confetti;
+      cx.clearRect(0,0,w,h);
+      confettiParts = confettiParts.filter(p=> p.y < h+60 && p.y>-80);
+      confettiParts.forEach(p=>{ p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.a += p.s; cx.save(); cx.translate(p.x,p.y); cx.rotate(p.a); cx.fillStyle=p.c; cx.fillRect(-p.r,-p.r,p.r*2,p.r*2); cx.restore(); })
+      requestAnimationFrame(stepConfetti);
+    }
+    stepConfetti();
+
+    /*************************
+     * VANILLA "GALAXY" BG   *
+     *************************/
+    const galaxy = document.getElementById('galaxy');
+    const g = galaxy.getContext('2d');
+    let W = 0, H = 0, DPR = Math.max(1, window.devicePixelRatio || 1);
+
+    const BG = { density: 1.2, glowIntensity: 0.5, saturation: 0.8, hueShift: 240, mouseRepulsion: true, mouseInteraction: true };
+
+    let stars = [];
+    const mouse = {x:0,y:0,active:false};
+    window.addEventListener('pointermove', e=>{ const r=galaxy.getBoundingClientRect(); mouse.x=(e.clientX - r.left)*DPR; mouse.y=(e.clientY - r.top)*DPR; mouse.active=true; });
+    window.addEventListener('pointerleave', ()=> mouse.active=false);
+
+    function resize(){
+      W = Math.floor(innerWidth * DPR); H = Math.floor(innerHeight * DPR);
+      galaxy.width=W; galaxy.height=H; galaxy.style.width=innerWidth+'px'; galaxy.style.height=innerHeight+'px';
+      build();
+    }
+    addEventListener('resize', resize, {passive:true});
+
+    function build(){
+      const count = Math.floor((W*H/3500) * BG.density / (DPR*DPR));
+      stars = new Array(count).fill(0).map(()=>{
+        const r = Math.random();
+        const layer = r<0.70?1:(r<0.93?2:3);
+        return { x: Math.random()*W, y: Math.random()*H, z: layer, base: (layer===1?0.6:(layer===2?1.2:2.2)) + Math.random()*0.6, tw: Math.random()*0.7 + 0.3, hue: (BG.hueShift + Math.random()*40 - 20 + 360)%360 }
+      })
+    }
+
+    function drawGlow(x,y,r,alpha){ const grad = g.createRadialGradient(x,y,0,x,y,r); grad.addColorStop(0, `hsla(${BG.hueShift}, ${Math.floor(55*BG.saturation)}%, 70%, ${0.65*alpha*BG.glowIntensity})`); grad.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = grad; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill(); }
+
+    function step(){
+      g.clearRect(0,0,W,H);
+      for(let n=0;n<3;n++){ const nx = (Math.sin(performance.now()/3000 + n)*0.5+0.5)*W; const ny = (Math.cos(performance.now()/4000 + n)*0.5+0.5)*H; drawGlow(nx,ny, Math.min(W,H)*0.35*(0.7+n*0.2), 0.4); }
+      stars.forEach(s=>{
+        let parallax = (s.z===1?0.15:(s.z===2?0.4:0.9));
+        if(mouse.active && BG.mouseInteraction){ const dx = (mouse.x - W/2)/W, dy = (mouse.y - H/2)/H; g.save(); g.translate(-dx*40*parallax, -dy*40*parallax); }
+        const twinkle = 0.6 + Math.sin(performance.now()/500 + s.tw)*0.3; const r = (s.base * twinkle) * DPR; g.fillStyle = `hsl(${s.hue}, ${Math.floor(60*BG.saturation)}%, ${70 + (s.z-1)*5}%)`; g.beginPath(); g.arc(s.x, s.y, r, 0, Math.PI*2); g.fill();
+        if(BG.glowIntensity>0){ drawGlow(s.x, s.y, r*7, 0.9); }
+        if(mouse.active && BG.mouseInteraction){ g.restore(); }
+        if(mouse.active && BG.mouseRepulsion){ const dx = s.x - mouse.x, dy = s.y - mouse.y; const d2 = dx*dx+dy*dy; const rad = 120*DPR; if(d2 < rad*rad){ const d = Math.max(Math.sqrt(d2), 0.001); const f = (rad - d)/rad * 0.4; s.x += (dx/d)*f; s.y += (dy/d)*f; } }
+        if(s.x< -10) s.x=W+10; if(s.x>W+10) s.x=-10; if(s.y< -10) s.y=H+10; if(s.y>H+10) s.y=-10;
+      })
+      requestAnimationFrame(step);
+    }
+
+    // Dust motes
+    const moteHost = document.getElementById('motes');
+    function spawnMotes(){ moteHost.innerHTML=''; const N = 24; for(let m=0;m<N;m++){ const d = document.createElement('div'); d.className='mote'; d.style.left = Math.random()*100+'vw'; d.style.top = (100+Math.random()*30)+'vh'; d.style.animationDelay = (-Math.random()*14)+'s'; d.style.opacity = (0.4+Math.random()*0.5); moteHost.appendChild(d); } }
+
+    // bootstrap
+    resize(); spawnMotes(); step();
+
+  </script>
+</body>
+</html>
